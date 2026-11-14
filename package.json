@@ -1,0 +1,62 @@
+{
+  "name": "@workerstack/utils",
+  "version": "0.0.0",
+  "description": "Small helpers, one subpath export each, optional peers",
+  "keywords": [
+    "cache",
+    "lru",
+    "utils",
+    "workerstack"
+  ],
+  "homepage": "https://github.com/workerstack/utils#readme",
+  "bugs": {
+    "url": "https://github.com/workerstack/utils/issues"
+  },
+  "license": "MIT",
+  "author": "Lovro Žagar",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/workerstack/utils.git"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./lru-cache": {
+      "types": "./dist/lru-cache/index.d.ts",
+      "default": "./dist/lru-cache/index.js"
+    },
+    "./tiered-cache": {
+      "types": "./dist/tiered-cache/index.d.ts",
+      "default": "./dist/tiered-cache/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint --deny-warnings",
+    "prepublishOnly": "bun run build",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "oxfmt": "0.78.0",
+    "oxlint": "1.93.0",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "bun@1.4.4"
+}
