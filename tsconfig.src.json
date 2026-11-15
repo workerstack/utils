@@ -1,0 +1,6 @@
+{
+  // The published code, held to the strict flags its declarations need.
+  "exclude": ["src/**/*.test.ts", "src/**/__fixtures__"],
+  "extends": ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
+  "include": ["src"]
+}

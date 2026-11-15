@@ -2,3 +2,31 @@ node_modules/
 dist/
 coverage/
 .tmp/
+
+# repo:ignore 6bfbc92f
+.tmp/
+.worktrees/
+coverage/
+.vitest/
+repo.config.local.ts
+**/.repo/plans/
+**/.repo/plans-fast/
+**/.repo/roadmaps/
+**/.repo/roadmaps-fast/
+**/.repo/handoffs/
+**/.repo/implementations/
+**/.repo/scratch/
+**/.repo/tmp/
+**/.repo/backlog.md
+node_modules/
+knip.jsonc
+knip.unignored-*.jsonc
+.oxfmtrc.jsonc
+.oxlintrc.jsonc
+.oxlintrc.unskipped-*.jsonc
+.agents/
+.claude/
+.codex/
+.cursor/
+.grok/
+# /repo:ignore
