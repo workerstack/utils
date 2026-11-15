@@ -1,6 +1,7 @@
 {
   "name": "@workerstack/utils",
   "version": "0.0.0",
+  "private": false,
   "description": "Small helpers, one subpath export each, optional peers",
   "keywords": [
     "cache",
@@ -21,6 +22,7 @@
   "files": [
     "dist",
     "!dist/**/*.map",
+    "references",
     "README.md",
     "LICENSE"
   ],
@@ -35,27 +37,33 @@
       "types": "./dist/tiered-cache/index.d.ts",
       "default": "./dist/tiered-cache/index.js"
     },
+    "./references/*": "./references/*",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
-    "lint": "oxlint --deny-warnings",
+    "build": "tsc -p tsconfig.build.json",
+    "check": "repo check",
+    "ci": "repo ci",
+    "fmt": "repo fmt",
+    "lint": "repo lint",
+    "prepare": "repo sync --postinstall",
     "prepublishOnly": "bun run build",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json"
+    "test": "vitest run"
   },
   "devDependencies": {
-    "oxfmt": "0.78.0",
-    "oxlint": "1.93.0",
+    "@cloudflare/workers-types": "5.20261001.1",
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
+    "@vitest/coverage-istanbul": "5.1.0",
+    "@workerstack/repo": "0.2.0-rc.2",
     "typescript": "7.0.2",
-    "vitest": "4.1.10"
+    "vitest": "5.1.0"
   },
   "engines": {
+    "bun": ">=1.4.4",
     "node": ">=22.12.0"
   },
   "packageManager": "bun@1.4.4"

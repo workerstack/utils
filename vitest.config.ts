@@ -1,9 +1,7 @@
-import { defineConfig, type ViteUserConfig } from "vitest/config";
+import { defineConfig } from "@workerstack/repo/vitest";
 
-const config: ViteUserConfig = defineConfig({
+export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
   },
 });
-
-export default config;
