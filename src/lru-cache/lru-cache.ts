@@ -13,17 +13,26 @@ export class LruCache<K, V> {
   private readonly maxSize: number;
   private readonly ttlMs: number | undefined;
 
+  /** An empty cache; its TTLs apply to every entry set without its own. */
   constructor(options: LruCacheOptions) {
     this.maxSize = options.maxSize;
     this.ttlMs = options.ttlMs;
     this.hardTtlMs = options.hardTtlMs;
   }
 
+  /** The number of entries, expired ones not yet evicted included. */
+  get size(): number {
+    return this.cache.size;
+  }
+
   /** The value, or undefined when missing or past soft expiry. Marks the key most recently used. */
   get(key: K): V | undefined {
     const entry = this.fresh(key);
+
     if (entry === undefined) return undefined;
+
     this.touch(key, entry);
+
     return entry.value;
   }
 
@@ -35,13 +44,19 @@ export class LruCache<K, V> {
    */
   getWithMeta(key: K): LruMeta<V> | undefined {
     const entry = this.cache.get(key);
+
     if (entry === undefined) return undefined;
+
     const now = Date.now();
+
     if (now > entry.hardExpiry) {
       this.cache.delete(key);
+
       return undefined;
     }
+
     this.touch(key, entry);
+
     return { stale: now > entry.softExpiry, value: entry.value };
   }
 
@@ -68,11 +83,6 @@ export class LruCache<K, V> {
     this.cache.clear();
   }
 
-  /** The number of entries, expired ones not yet evicted included. */
-  get size(): number {
-    return this.cache.size;
-  }
-
   /** Whether the key is present and not past soft expiry. Does not mark it used. */
   has(key: K): boolean {
     return this.fresh(key) !== undefined;
@@ -81,10 +91,15 @@ export class LruCache<K, V> {
   /** The entry while it is before soft expiry; one past hard expiry is evicted. */
   private fresh(key: K): LruEntry<V> | undefined {
     const entry = this.cache.get(key);
+
     if (entry === undefined) return undefined;
+
     const now = Date.now();
+
     if (now <= entry.softExpiry) return entry;
+
     if (now > entry.hardExpiry) this.cache.delete(key);
+
     return undefined;
   }
 
@@ -96,13 +111,19 @@ export class LruCache<K, V> {
 
   private insert(key: K, value: V, ttl: { soft: number | undefined; storedAt: number }): void {
     this.cache.delete(key);
-    if (this.cache.size >= this.maxSize) {
-      /* the Map's first key is the least recently used */
-      const oldest = this.cache.keys().next();
-      if (oldest.done !== true) this.cache.delete(oldest.value);
-    }
-    const softExpiry = ttl.soft ? ttl.storedAt + ttl.soft : Number.POSITIVE_INFINITY;
-    const hardExpiry = this.hardTtlMs ? ttl.storedAt + this.hardTtlMs : softExpiry;
+
+    if (this.cache.size >= this.maxSize) this.evictOldest();
+
+    const softExpiry = ttl.soft === undefined ? Number.POSITIVE_INFINITY : ttl.storedAt + ttl.soft;
+    const hardExpiry = this.hardTtlMs === undefined ? softExpiry : ttl.storedAt + this.hardTtlMs;
+
     this.cache.set(key, { hardExpiry, softExpiry, value });
+  }
+
+  /** Drop the Map's first key: the least recently used. */
+  private evictOldest(): void {
+    const oldest = this.cache.keys().next();
+
+    if (oldest.done !== true) this.cache.delete(oldest.value);
   }
 }
