@@ -50,7 +50,7 @@
     "fmt": "repo fmt",
     "lint": "repo lint",
     "prepare": "repo sync --postinstall",
-    "prepublishOnly": "bun run build",
+    "prepack": "bun run build",
     "test": "vitest run"
   },
   "devDependencies": {
