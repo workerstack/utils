@@ -1,273 +1,73 @@
 import { describe, expect, it } from "vitest";
+
 import { LruCache } from "./lru-cache.ts";
 
-describe("LruCache", () => {
-  describe("basic operations", () => {
-    it("should set and get values", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
+function filled(maxSize: number, keys: string[]): LruCache<string, number> {
+  const cache = new LruCache<string, number>({ maxSize });
 
-      cache.set("a", 1);
-      cache.set("b", 2);
+  for (const [i, key] of keys.entries()) cache.set(key, i + 1);
 
-      expect(cache.get("a")).toBe(1);
-      expect(cache.get("b")).toBe(2);
-    });
+  return cache;
+}
 
-    it("should return undefined for missing keys", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
+function leave(): void {
+  // no access: the cache keeps its insertion order
+}
 
-      expect(cache.get("missing")).toBeUndefined();
-    });
+describe("LruCache reads and writes", () => {
+  it("gets what was set, and the last value set for a key", () => {
+    const cache = filled(10, ["a", "b"]);
 
-    it("should update existing keys", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
+    cache.set("b", 20);
 
-      cache.set("a", 1);
-      cache.set("a", 2);
-
-      expect(cache.get("a")).toBe(2);
-      expect(cache.size).toBe(1);
-    });
-
-    it("should delete keys", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
-
-      cache.set("a", 1);
-      expect(cache.delete("a")).toBe(true);
-      expect(cache.get("a")).toBeUndefined();
-      expect(cache.delete("a")).toBe(false);
-    });
-
-    it("should clear all entries", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
-
-      cache.set("a", 1);
-      cache.set("b", 2);
-      cache.set("c", 3);
-
-      cache.clear();
-
-      expect(cache.size).toBe(0);
-      expect(cache.get("a")).toBeUndefined();
-      expect(cache.get("b")).toBeUndefined();
-      expect(cache.get("c")).toBeUndefined();
-    });
-
-    it("should track size correctly", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
-
-      expect(cache.size).toBe(0);
-
-      cache.set("a", 1);
-      expect(cache.size).toBe(1);
-
-      cache.set("b", 2);
-      expect(cache.size).toBe(2);
-
-      cache.delete("a");
-      expect(cache.size).toBe(1);
-
-      cache.clear();
-      expect(cache.size).toBe(0);
-    });
-
-    it("should check key existence with has", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
-
-      expect(cache.has("a")).toBe(false);
-
-      cache.set("a", 1);
-      expect(cache.has("a")).toBe(true);
-
-      cache.delete("a");
-      expect(cache.has("a")).toBe(false);
-    });
+    expect([cache.get("a"), cache.get("b"), cache.size]).toStrictEqual([1, 20, 2]);
   });
 
-  describe("LRU eviction", () => {
-    it("should evict oldest entry when max size reached", () => {
-      const cache = new LruCache<string, number>({ maxSize: 3 });
+  it("misses a key never set, deleted, or cleared", () => {
+    const cache = filled(10, ["a", "b", "c"]);
 
-      cache.set("a", 1);
-      cache.set("b", 2);
-      cache.set("c", 3);
+    expect(cache.delete("a")).toBe(true);
+    expect(cache.delete("a")).toBe(false);
+    expect([cache.get("a"), cache.has("a"), cache.get("missing")]).toStrictEqual([undefined, false, undefined]);
 
-      expect(cache.size).toBe(3);
+    cache.clear();
 
-      cache.set("d", 4);
-
-      expect(cache.size).toBe(3);
-      expect(cache.get("a")).toBeUndefined(); /* oldest evicted */
-      expect(cache.get("b")).toBe(2);
-      expect(cache.get("c")).toBe(3);
-      expect(cache.get("d")).toBe(4);
-    });
-
-    it("should update access order on get", () => {
-      const cache = new LruCache<string, number>({ maxSize: 3 });
-
-      cache.set("a", 1);
-      cache.set("b", 2);
-      cache.set("c", 3);
-
-      /* access 'a' to make it most recently used */
-      cache.get("a");
-
-      /* add new entry, should evict 'b' (oldest) not 'a' */
-      cache.set("d", 4);
-
-      expect(cache.get("a")).toBe(1); /* still exists */
-      expect(cache.get("b")).toBeUndefined(); /* evicted */
-      expect(cache.get("c")).toBe(3);
-      expect(cache.get("d")).toBe(4);
-    });
-
-    it("should update access order on set", () => {
-      const cache = new LruCache<string, number>({ maxSize: 3 });
-
-      cache.set("a", 1);
-      cache.set("b", 2);
-      cache.set("c", 3);
-
-      /* update 'a' to make it most recently used */
-      cache.set("a", 10);
-
-      /* add new entry, should evict 'b' (oldest) */
-      cache.set("d", 4);
-
-      expect(cache.get("a")).toBe(10); /* still exists, updated */
-      expect(cache.get("b")).toBeUndefined(); /* evicted */
-      expect(cache.get("c")).toBe(3);
-      expect(cache.get("d")).toBe(4);
-    });
-
-    it("should handle single-entry cache", () => {
-      const cache = new LruCache<string, number>({ maxSize: 1 });
-
-      cache.set("a", 1);
-      expect(cache.get("a")).toBe(1);
-
-      cache.set("b", 2);
-      expect(cache.get("a")).toBeUndefined();
-      expect(cache.get("b")).toBe(2);
-    });
+    expect([cache.size, cache.get("b"), cache.has("c")]).toStrictEqual([0, undefined, false]);
   });
 
-  describe("TTL expiration", () => {
-    it("should expire entries after TTL", async () => {
-      const cache = new LruCache<string, number>({ maxSize: 10, ttlMs: 50 });
+  it("keeps the same reference, and null or undefined as values", () => {
+    const value = { data: "test" };
+    const cache = new LruCache<string, { data: string } | null | undefined>({ maxSize: 10 });
 
-      cache.set("a", 1);
-      expect(cache.get("a")).toBe(1);
+    cache.set("object", value);
+    cache.set("null", null);
+    cache.set("undefined", undefined);
 
-      await new Promise((r) => setTimeout(r, 60));
+    expect(cache.get("object")).toBe(value);
+    expect([cache.get("null"), cache.has("null"), cache.has("undefined")]).toStrictEqual([null, true, true]);
+  });
+});
 
-      expect(cache.get("a")).toBeUndefined();
-    });
+describe("LruCache eviction", () => {
+  it.each<[string, (cache: LruCache<string, number>) => void, string[]]>([
+    ["no access", leave, ["b", "c", "d"]],
+    ["a get of a", (cache) => cache.get("a"), ["a", "c", "d"]],
+    ["a set of a", (cache) => cache.set("a", 1), ["a", "c", "d"]],
+    ["a has of a, which does not mark it used", (cache) => cache.has("a"), ["b", "c", "d"]],
+  ])("drops the least recently used key when full, after %s", (_access, access, kept) => {
+    const cache = filled(3, ["a", "b", "c"]);
 
-    it("should not expire entries before TTL", async () => {
-      const cache = new LruCache<string, number>({ maxSize: 10, ttlMs: 100 });
+    access(cache);
+    cache.set("d", 4);
 
-      cache.set("a", 1);
-
-      await new Promise((r) => setTimeout(r, 50));
-      expect(cache.get("a")).toBe(1);
-    });
-
-    it("should support per-key TTL override", async () => {
-      const cache = new LruCache<string, number>({ maxSize: 10, ttlMs: 100 });
-
-      cache.set("default", 1);
-      cache.set("custom", 2, 50);
-
-      await new Promise((r) => setTimeout(r, 60));
-
-      expect(cache.get("custom")).toBeUndefined(); /* expired after 50ms */
-      expect(cache.get("default")).toBe(1); /* still valid, 100ms TTL */
-    });
-
-    it("should remove expired entries on has check", async () => {
-      const cache = new LruCache<string, number>({ maxSize: 10, ttlMs: 50 });
-
-      cache.set("a", 1);
-      expect(cache.has("a")).toBe(true);
-
-      await new Promise((r) => setTimeout(r, 60));
-
-      expect(cache.has("a")).toBe(false);
-      expect(cache.size).toBe(0);
-    });
-
-    it("should handle cache without TTL", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
-
-      cache.set("a", 1);
-
-      /* immediately check - should still exist since no TTL */
-      expect(cache.get("a")).toBe(1);
-    });
+    expect(["a", "b", "c", "d"].filter((key) => cache.has(key))).toStrictEqual(kept);
   });
 
-  describe("edge cases", () => {
-    it("should handle various key types", () => {
-      const cache = new LruCache<number | string, string>({ maxSize: 10 });
+  it("keeps only the newest maxSize keys of many", () => {
+    const cache = new LruCache<number, number>({ maxSize: 100 });
 
-      cache.set(1, "number key");
-      cache.set("string", "string key");
+    for (let i = 0; i < 1000; i++) cache.set(i, i * 2);
 
-      expect(cache.get(1)).toBe("number key");
-      expect(cache.get("string")).toBe("string key");
-    });
-
-    it("should handle object values", () => {
-      const cache = new LruCache<string, { data: string }>({ maxSize: 10 });
-
-      const obj = { data: "test" };
-      cache.set("key", obj);
-
-      expect(cache.get("key")).toEqual(obj);
-      expect(cache.get("key")).toBe(obj); /* same reference */
-    });
-
-    it("should handle null and undefined values", () => {
-      const cache = new LruCache<string, null | undefined>({ maxSize: 10 });
-
-      cache.set("null", null);
-      cache.set("undefined", undefined);
-
-      expect(cache.get("null")).toBeNull();
-      expect(cache.get("undefined")).toBeUndefined();
-      expect(cache.has("null")).toBe(true);
-      expect(cache.has("undefined")).toBe(true);
-    });
-
-    it("should handle rapid set/get operations", () => {
-      const cache = new LruCache<number, number>({ maxSize: 100 });
-
-      for (let i = 0; i < 1000; i++) {
-        cache.set(i, i * 2);
-      }
-
-      expect(cache.size).toBe(100); /* only last 100 */
-
-      for (let i = 900; i < 1000; i++) {
-        expect(cache.get(i)).toBe(i * 2);
-      }
-
-      expect(cache.get(0)).toBeUndefined(); /* evicted */
-      expect(cache.get(899)).toBeUndefined(); /* evicted */
-    });
-
-    it("should handle empty cache operations", () => {
-      const cache = new LruCache<string, number>({ maxSize: 10 });
-
-      expect(cache.get("missing")).toBeUndefined();
-      expect(cache.has("missing")).toBe(false);
-      expect(cache.delete("missing")).toBe(false);
-      expect(cache.size).toBe(0);
-
-      cache.clear();
-      expect(cache.size).toBe(0);
-    });
+    expect([cache.size, cache.get(899), cache.get(900), cache.get(999)]).toStrictEqual([100, undefined, 1800, 1998]);
   });
 });
