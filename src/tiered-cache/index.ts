@@ -1,7 +1,11 @@
 export { asksBypass } from "./asks-bypass.ts";
+
 export { CACHE_PRESETS } from "./tiered-cache.constants.ts";
+
 export { TieredCache } from "./tiered-cache.ts";
+
 export type {
+  Background,
   CacheCtx,
   CachePreset,
   CachePresetTtl,
@@ -9,6 +13,7 @@ export type {
   CacheTier,
   CacheTraceEntry,
   GetOptions,
+  HeaderReader,
   InvalidateOptions,
   SetOptions,
   TieredCacheKv,
